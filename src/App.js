@@ -1,23 +1,51 @@
 import React from 'react';
 import ApolloClient from 'apollo-boost';
+import {ApolloProvider} from 'react-apollo'
 
-import { BrowserRouter as Router, Route } from 'react-router-dom';
+import {BrowserRouter as Router, Redirect, Route, Switch} from 'react-router-dom';
 
 import Login from './pages/Login'
 import Home from './pages/Home'
 import Register from './pages/Register'
+import withSession from "./components/withSession";
 
 
 const client = new ApolloClient({
-  uri: 'https://48p1r2roz4.sse.codesandbox.io',
+	uri: 'http://localhost:9000/graphql',
+	fetchOptions: {
+		credentials: "include"
+	},
+	request: operation => {
+		const token = localStorage.getItem("token")
+		operation.setContext({
+			headers: {
+				authorization: token
+			}
+		})
+	},
+	onError: ({networkError}) => {
+		if (networkError) {
+			console.log("Network Error", networkError)
+			if (networkError.statusCode === 400) {
+				localStorage.removeItem("token")
+			}
+		}
+	}
 });
 
 const App = () => (
-  <Router>
-    <Route exact path="/" component={Home}/>
-    <Route exact path="/login" component={Login}/>
-    <Route exact path="/register" component={Register}/>
-  </Router>
+	<ApolloProvider client={client}>
+		<Router>
+			<Switch>
+				<Route exact path="/" component={Home}/>
+				<Route path="/login" component={Login}/>
+				<Route path="/register" component={Register}/>
+				<Redirect to="/"/>
+			</Switch>
+		</Router>
+	</ApolloProvider>
 );
 
-export default App
+const AppWithSession = withSession(App);
+
+export default AppWithSession
